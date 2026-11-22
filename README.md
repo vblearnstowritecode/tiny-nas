@@ -154,3 +154,47 @@ Honest notes: digits are a tiny task, and our bottleneck squeezes 4×, like
 ResNet's 2,048 → 512. Bigger tasks may show bigger gaps.
 
 Try it: `python nas_blocks.py` (about 10 minutes). Tests: `python test_nas_blocks.py`.
+
+## Day 3: what "blame" is, on a machine with one weight
+
+Day 2's bypass helps training. To see why, we first need to know how training
+decides which way to turn a weight. Today: one weight, by hand.
+
+The machine: `output = input × weight`. Input 2, target 6, start weight 1.
+
+```
+loss  = (target − output)²          # squared, so overshooting is bad too
+blame = how fast the loss changes when you nudge the weight
+      = derivative of loss with respect to weight (the "gradient")
+      = −2 × miss × input           # chain rule
+```
+
+At weight 1: miss = 4, so blame = −2 × 4 × 2 = **−16**.
+The minus says "raise the weight". The 16 says "it's steep here".
+
+Training moves **a small slice of the blame**, against it:
+
+```
+new weight = old weight − slice × blame
+           = 1 − 0.05 × (−16) = 1.8
+
+step   weight   miss    blame
+  0    1.000    4.00   −16.00
+  1    1.800    2.40    −9.60      steps shrink as we get close:
+  2    2.280    1.44    −5.76      the loss is a bowl, steep far away,
+ ...                               flat near the bottom
+ 12    2.996    0.01    −0.03
+```
+
+Use all the blame (slice 1) instead, and the weight jumps 1 → 17 → −95 → 689.
+Blame gives the direction and steepness, not the distance.
+
+Why not just solve `weight = target ÷ input` exactly? With one picture you can.
+With many pictures they disagree (one wants 3.5, another 5), so there's no
+exact answer. Small downhill steps still work. PyTorch's `loss.backward()`
+computes this blame for every weight in a network.
+
+Try it: `python blame.py` (instant). Tests: `python test_blame.py`.
+
+A question for tomorrow: in a deep network, blame is many links multiplied
+together. If each link is 0.5, how much blame reaches the first layer?

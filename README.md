@@ -198,3 +198,46 @@ Try it: `python blame.py` (instant). Tests: `python test_blame.py`.
 
 A question for tomorrow: in a deep network, blame is many links multiplied
 together. If each link is 0.5, how much blame reaches the first layer?
+
+## Day 4: dividing bounces forever, small slices find a compromise
+
+With one picture, you can fix the weight exactly: `weight = target ÷ input`.
+With two pictures that disagree, that exact fix bounces forever. Small
+gradient steps settle on a compromise instead.
+
+Same machine as Day 3 (`output = input × weight`), now with two pictures:
+
+```
+A: input 2, target 6   → alone, A wants weight 3
+B: input 1, target 5   → alone, B wants weight 5
+
+Divide (jump to each picture's answer):   3, 5, 3, 5, 3, 5 ...  never settles
+Slice 0.05 (small tug from each picture): 1.8, 2.1, 2.5 ... wobbles 3.26 ↔ 3.43
+Batch (average both gradients, 1 step):   1.6 ... 3.400
+```
+
+My bet: the midpoint, 4. The answer: **3.4**. It leans toward A. Why?
+
+```
+loss = (6 − 2 × weight)²  +  (5 − 1 × weight)²
+slope of A's part = −4 × missA     ← input 2 comes out of the chain rule
+slope of B's part = −2 × missB     ← input 1
+
+At 3.4:  missA = −0.8, missB = 1.6
+         4 × 0.8 = 2 × 1.6   → the two tugs cancel
+```
+
+The weight has more grip on A's output (one unit of weight moves it by 2,
+not 1). So training listens harder to the picture the weight can move.
+Bigger inputs quietly get more say, which is one reason engineers scale
+inputs to similar sizes before training.
+
+The division rule also breaks on a tiny input: input 0.01 jumps the weight
+from 1 to 600. The gradient multiplies by the input instead, so a tiny input
+gets a tiny step. Averaging gradients over a batch (Day 2 used 32 pictures)
+removes the wobble too.
+
+Try it: `python divide_vs_slice.py` (instant). Tests: `python test_divide_vs_slice.py`.
+
+Day 3's question (how much blame survives many links of 0.5?) is still open.
+That's Day 5.

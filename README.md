@@ -241,3 +241,52 @@ Try it: `python divide_vs_slice.py` (instant). Tests: `python test_divide_vs_sli
 
 Day 3's question (how much blame survives many links of 0.5?) is still open.
 That's Day 5.
+
+## Day 5: where "old − learning rate × blame" comes from
+
+The update rule isn't a magic recipe. It comes from Taylor: the slope tells
+you which way to go, and the learning rate stands in for the curve the slope
+can't see.
+
+Same machine (`output = input × weight`, input 2, target 6), standing at
+weight 1: loss 16, slope −16. The slope gives a straight-line guess of the loss:
+
+```
+ step   line says   truth
+  0.1     14.40     14.44    ✓ trust it nearby
+   10   −144.00    256.00    ✗ impossible (a square is never negative)
+```
+
+A line has no bottom. It always says "go further," so it can't choose a step.
+Add the bend (the second-order Taylor term) and you get a bowl with a bottom:
+
+```
+loss ≈ 16 − 16 × step + ½ × 8 × step²
+              ▲                ▲
+            slope          bend (how fast the slope changes)
+
+bottom:  step = − slope ÷ bend = 16 ÷ 8 = 2   → weight 3, done in one step
+```
+
+That's Day 4's "divide" (miss ÷ input = 4 ÷ 2). It's called Newton's method.
+
+Real networks can't afford the bend. With millions of weights it becomes a
+millions × millions table. So gradient descent guesses it: **bend ≈ 1 ÷
+learning rate**. The bottom of that guessed bowl is
+
+```
+step = − learning rate × slope        ← the update rule
+
+rate 0.05  (guessed bend 20, too steep):  step 0.8 → weight 1.8   safe, slow
+rate 1/8   (guessed bend 8, just right):  step 2   → weight 3     perfect
+rate 1     (guessed bend 1, too flat):    step 16  → weight 17    blow-up
+```
+
+The trade-off: a small learning rate means a cautious, slow step. A big one
+means trusting the straight line too far. PyTorch's `torch.optim.SGD(lr=...)`
+uses exactly this rule; the `lr` is your guess for one over the bend.
+
+Try it: `python where_the_step_comes_from.py` (instant).
+Tests: `python test_where_the_step_comes_from.py`.
+
+Day 3's question (how much blame survives many links of 0.5?) moves to Day 6.

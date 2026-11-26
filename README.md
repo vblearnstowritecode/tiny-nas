@@ -290,3 +290,47 @@ Try it: `python where_the_step_comes_from.py` (instant).
 Tests: `python test_where_the_step_comes_from.py`.
 
 Day 3's question (how much blame survives many links of 0.5?) moves to Day 6.
+
+## Day 6: blame fades (or explodes) through a long chain
+
+The miss only exists at the end, so blame walks back from there. Each link
+it crosses multiplies it by that link's weight. Many weights below 1 make it
+fade. Many weights above 1 make it explode.
+
+Why multiply by the weight? A link does `out = w × in`. Bump `in` by 1 and
+`out` moves by `w`. So the error cares about `in` exactly `w` times as much
+as it cares about `out`.
+
+```
+10 links of 0.5:   start 0.001 ← ... ← 0.25 ← 0.5 ← 1 end    (vanishing)
+10 links of 2:     start 1024  ← ... ← 4    ← 2   ← 1 end    (exploding)
+10 links of 1:     start 1     ← ... ← 1    ← 1   ← 1 end    (steady)
+```
+
+A layer with blame 0.001 takes a step 1,000× smaller, so it barely learns.
+A layer with blame 1,024 takes a giant step, like Day 3's blow-up.
+
+**Why walk backward at all?** You could bump each weight and rerun the chain
+forward. You'd get the same blame, but you'd need a separate run for every
+weight. A network has millions of weights and only one error, so one walk
+back that drops off every weight's share wins:
+
+```
+links     forward hops    backward hops
+  10            55              10
+ 100         5,050             100
+```
+
+The trade-off: the backward walk must remember every middle number from the
+forward run. Backward saves compute and spends memory. That's why training
+needs far more memory than inference. PyTorch's `loss.backward()` is this walk.
+It's called backpropagation.
+
+Day 3's question answered: through 10 links of 0.5, about 0.001 of the blame
+survives. Through 50, less than one part in a million billion.
+
+Try it: `python fading_chain.py` (instant). Tests: `python test_fading_chain.py`.
+
+A question to think about: a link of 1 keeps blame steady. Day 2's bypass
+adds the input back (`out = block(in) + in`). What does that `+ in` do to the
+link?

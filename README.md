@@ -334,3 +334,51 @@ Try it: `python fading_chain.py` (instant). Tests: `python test_fading_chain.py`
 A question to think about: a link of 1 keeps blame steady. Day 2's bypass
 adds the input back (`out = block(in) + in`). What does that `+ in` do to the
 link?
+
+## Day 7: each hop back makes two blames
+
+Every blame answers one question: *nudge this one weight a little, freeze
+the others, and how much does the final error move?* Backprop gets that
+answer for every weight in one walk from the end.
+
+```
+input --[x a]--> middle --[x b]--> output      target 3
+  1       2        2       0.5       1         error (3 - 1)^2 = 4
+```
+
+**Start at the end.** The chain rule on `(target − output)²` gives
+`−2 × miss = −2 × 2 = −4`. That's the only blame we know right away.
+
+**Each hop makes two numbers from the blame on its right:**
+
+```
+b's blame      = −4 × middle 2 = −8    weight's blame: × number flowing IN
+middle's blame = −4 × b 0.5    = −2    messenger:      × the weight
+a's blame      = −2 × input 1  = −2    (next hop, same move)
+```
+
+The weight's blame is what we nudge with. The middle's blame is a messenger.
+Weight `a` can only reach the error *through* the middle, so its news has to
+be carried back.
+
+**Freeze the weights, let the numbers ripple.** Nudge `a` with `b` frozen,
+and the middle and output still move. That ripple is what the chain rule
+counts. The demo checks it: nudging `a` by 0.001 gives −1.9997, and the walk
+back gives −2.
+
+**Forward or backward?** Both multiply the same arrows. You can save every
+arrow on the way forward. But b's blame needs `b→c × c→hand`, everything on
+its right, and that only exists once you reach the end. So you combine the
+saved pieces from the right, and that is the backward walk. PyTorch does
+exactly this. The forward pass saves the pieces, and `loss.backward()`
+combines them.
+
+The trade-off: one walk back gives every blame, but it has to keep every
+middle number from the forward walk. That costs memory, not time.
+
+Try it: `python two_blames_per_hop.py` (instant).
+Tests: `python test_two_blames_per_hop.py`.
+
+Day 6's bypass question (`out = block(in) + in`) stays open for a later day.
+A question to think about: if each layer has 1,000 neurons, how many numbers
+does the backward messenger carry?

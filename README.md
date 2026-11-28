@@ -382,3 +382,43 @@ Tests: `python test_two_blames_per_hop.py`.
 Day 6's bypass question (`out = block(in) + in`) stays open for a later day.
 A question to think about: if each layer has 1,000 neurons, how many numbers
 does the backward messenger carry?
+
+## Day 8: a nudge measures the average slope
+
+A two-weight chain, worked by hand:
+
+```
+x 2 --[x w1 = 3]--> h 6 --[x w2 = 0.5]--> y 3      target 1, loss (3 − 1)² = 4
+```
+
+**Blame on y, two ways.** The derivative of (y − 1)² is 2 × (y − 1).
+Plug in the *current* y, 3, and you get 4. Nudge y to 3.01 and the loss goes
+4 → 4.0401, a ratio of 4.01. Why not exactly 4?
+
+| nudge | slope at start (y = 3) | slope at landing | average | nudge ratio |
+|-------|-----|-------|-------|-------|
+| 0.1   | 4   | 4.2   | 4.1   | 4.1   |
+| 0.01  | 4   | 4.02  | 4.01  | 4.01  |
+| 0.001 | 4   | 4.002 | 4.001 | 4.001 |
+
+The nudge ratio is the **average** of the slope where you start and the slope
+where you land. (That is exact for a squared loss, because its slope is a
+straight line.) A common slip is to plug the nudged y into the derivative.
+That gives the landing slope, not the slope where we are.
+
+**Each partner sees the other.** In y = w2 × h, nudging w2 moves y by h, and
+nudging h moves y by w2:
+
+```
+w2's blame = 4 × h 6    = 24     a weight's blame is scaled by its input
+h's blame  = 4 × w2 0.5 = 2      blame passed back is scaled by the weight
+w1's blame = 2 × x 2    = 4
+```
+
+Nudge checks agree: 24.0036 and 4.0001 with a nudge of 0.0001.
+
+Try it: `python nudge_is_an_average.py` (instant).
+Tests: `python test_nudge_is_an_average.py`.
+
+A question to think about: every hop back multiplies the blame by a weight.
+What happens after 50 hops of × 0.5?
